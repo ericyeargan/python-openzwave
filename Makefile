@@ -262,7 +262,7 @@ build: openzwave/libopenzwave.a
 build-openzwave: openzwave/libopenzwave.a
 
 openzwave:
-	git clone git://github.com/OpenZWave/open-zwave.git openzwave
+	git clone https://github.com/ericyeargan/open-zwave.git openzwave
 
 openzwave/libopenzwave.a: openzwave
 	sed -i '253s/.*//' openzwave/cpp/src/value_classes/ValueID.h
