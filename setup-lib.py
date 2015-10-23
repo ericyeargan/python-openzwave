@@ -34,6 +34,7 @@ else:
 from platform import system as platform_system
 import glob
 from pyozw_version import pyozw_version
+from Cython.Build import cythonize
 
 DEBIAN_PACKAGE = False
 filtered_args = []
@@ -120,8 +121,8 @@ setup(
   zip_safe = False,
   url='https://github.com/OpenZWave/python-openzwave',
   cmdclass = {'build_ext': build_ext},
-  ext_modules = ext_modules,
-  #ext_modules = cythonize(ext_modules),
+  #ext_modules = ext_modules,
+  ext_modules = cythonize(ext_modules),
   package_dir = {'' : 'src-lib'},
   #The following line install config drectory in share/python-openzwave
   data_files = data_files,
