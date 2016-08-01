@@ -1,3 +1,4 @@
 [submodule "openzwave"]
 	path = openzwave
 	url = https://github.com/ericyeargan/open-zwave.git
+	branch = automatar
