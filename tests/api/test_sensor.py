@@ -37,7 +37,8 @@ import libopenzwave
 import re
 import time
 import sys
-if sys.hexversion >= 0x3000000:
+import six
+if six.PY3:
     from pydispatch import dispatcher
 else:
     from louie import dispatcher
@@ -120,6 +121,16 @@ class TestSensor(TestApi):
                 self.assertTrue(good)
         if not ran :
             self.skipTest("No Decimal sensor found")
+            
+    def test_510_sensor_label(self):
+        ran = False
+        for node in self.network.nodes:
+            for sensorid, sensor in self.network.nodes[node].get_sensors().items():
+                ran = True
+                label = sensor.label
+                self.assertTrue(isinstance(label, str))
+        if not ran :
+            self.skipTest("No sensor found")
 
 if __name__ == '__main__':
     sys.argv.append('-v')

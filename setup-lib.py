@@ -54,15 +54,11 @@ def data_files_config(target, source, pattern):
     tup = list()
     tup.append(target)
     tup.append(glob.glob(os.path.join(source,pattern)))
-    #print tup
     ret.append(tup)
     dirs = _getDirs(source)
     if len(dirs):
         for d in dirs:
-            #print os.path.abspath(d)
             rd = d.replace(source+os.sep, "", 1)
-            #print target,rd
-            #print os.path.join(target,rd)
             ret.extend(data_files_config(os.path.join(target,rd), \
                 os.path.join(source,rd), pattern))
     return ret
@@ -73,7 +69,7 @@ data_files.extend(data_files_config('config','openzwave/config','*.xsd'))
 cmdclass = { }
 ext_modules = [ ]
 
-if os_name == 'win32' or os_name=='nt':
+if platform_system() == 'Windows':
     ext_modules = [Extension("libopenzwave",
                              sources=["src-lib/libopenzwave/libopenzwave.pyx"],
                              libraries=['setupapi', 'stdc++'],
@@ -81,32 +77,45 @@ if os_name == 'win32' or os_name=='nt':
                              extra_objects=['openzwave/libopenzwave.a'],
                              include_dirs=['openzwave/cpp/src', 'openzwave/cpp/src/value_classes', 'openzwave/cpp/src/platform', 'openzwave/cpp/build/windows', "src-lib/libopenzwave"]
     )]
-elif platform_system() == 'darwin':
+elif platform_system() == 'Darwin':
     ext_modules = [Extension("libopenzwave",
                              sources=["src-lib/libopenzwave/libopenzwave.pyx"],
-                             libraries=['udev', 'stdc++'],
+                             libraries=['stdc++'],
                              language="c++",
                              extra_link_args=['-framework', 'CoreFoundation', '-framework', 'IOKit'],
                              extra_objects=['openzwave/libopenzwave.a'],
                              include_dirs=['openzwave/cpp/src', 'openzwave/cpp/src/value_classes', 'openzwave/cpp/src/platform', 'openzwave/cpp/build/mac', "src-lib/libopenzwave"]
     )]
+elif platform_system() == 'FreeBSD':
+    ext_modules = [Extension("libopenzwave",
+                             sources=["src-lib/libopenzwave/libopenzwave.pyx"],
+                             libraries=['usb', 'stdc++'],
+                             language="c++",
+                             define_macros=[
+                                 ('PY_SSIZE_T_CLEAN',1),
+                             ],
+                             extra_objects=['openzwave/libopenzwave.a'],
+                             include_dirs=['openzwave/cpp/src/', 'openzwave/cpp/src/value_classes/', 'openzwave/cpp/src/platform/', 'openzwave/cpp/build/linux/']
+    )]
 elif DEBIAN_PACKAGE == True:
+    #For linux dynamic
     ext_modules = [Extension("libopenzwave",
                              sources=["src-lib/libopenzwave/libopenzwave.pyx"],
                              libraries=['udev', 'stdc++', 'openzwave'],
                              language="c++",
-                             define_macros=[ 
+                             define_macros=[
                                  ('PY_SSIZE_T_CLEAN',1),
                              ],
                              #extra_objects=['/usr/libopenzwave.a'],
                              include_dirs=['/usr/include/openzwave', '/usr/include/openzwave/value_classes', '/usr/include/openzwave/platform', "src-lib/libopenzwave"]
     )]
 else:
+    #For linux static
     ext_modules = [Extension("libopenzwave",
                              sources=["src-lib/libopenzwave/libopenzwave.pyx"],
                              libraries=['udev', 'stdc++'],
                              language="c++",
-                             define_macros=[ 
+                             define_macros=[
                                  ('PY_SSIZE_T_CLEAN',1),
                              ],
                              extra_objects=['openzwave/libopenzwave.a'],

@@ -27,7 +27,8 @@ from openzwave.object import ZWaveObject
 from openzwave.group import ZWaveGroup
 from openzwave.value import ZWaveValue
 from openzwave.command import ZWaveNodeBasic, ZWaveNodeSwitch
-from openzwave.command import ZWaveNodeSensor, ZWaveNodeSecurity
+from openzwave.command import ZWaveNodeSensor, ZWaveNodeThermostat
+from openzwave.command import ZWaveNodeSecurity
 
 # Set default logging handler to avoid "No handler found" warnings.
 import logging
@@ -43,7 +44,8 @@ logger.addHandler(NullHandler())
 
 class ZWaveNode(ZWaveObject,
                 ZWaveNodeBasic, ZWaveNodeSwitch,
-                ZWaveNodeSensor, ZWaveNodeSecurity):
+                ZWaveNodeSensor, ZWaveNodeThermostat,
+                ZWaveNodeSecurity):
     """
     Represents a single Node within the Z-Wave Network.
 
@@ -75,7 +77,7 @@ class ZWaveNode(ZWaveObject,
         :rtype: str
 
         """
-        return 'home_id: [%s] id: [%s] name: [%s] model: [%s]' % \
+        return u'home_id: [%s] id: [%s] name: [%s] model: [%s]' % \
           (self._network.home_id_str, self._object_id, self.name, self.product_name)
 
     @property
@@ -171,6 +173,26 @@ class ZWaveNode(ZWaveObject,
         """
         return self._network.manager.getNodeProductId(self.home_id, self.object_id)
 
+    @property
+    def device_type(self):
+        """
+        The device_type of the node.
+
+        :rtype: str
+
+        """
+        return self._network.manager.getNodeDeviceTypeString(self.home_id, self.object_id)
+
+    @property
+    def role(self):
+        """
+        The role of the node.
+
+        :rtype: str
+
+        """
+        return self._network.manager.getNodeRoleString(self.home_id, self.object_id)
+
     def to_dict(self, extras=['all']):
         """
         Return a dict representation of the node.
@@ -247,6 +269,17 @@ class ZWaveNode(ZWaveObject,
         """
         return self._network.manager.getNumGroups(self.home_id, self.object_id)
 
+    def get_max_associations(self, groupidx):
+        """
+        Gets the maximum number of associations for a group.
+
+        :param groupidx: The group to query
+        :type groupidx: int
+        :rtype: int
+
+        """
+        return self._network.manager.getMaxAssociations(self.home_id, self.node_id, groupidx)
+
     @property
     def groups(self):
         """
@@ -260,9 +293,13 @@ class ZWaveNode(ZWaveObject,
 
         """
         groups = dict()
-        number_groups = self.num_groups
-        for i in range(1, number_groups+1):
-            groups[i] = ZWaveGroup(i, network=self._network, node_id=self.node_id)
+        groups_added = 0
+        i = 1
+        while groups_added < self.num_groups and i<256:
+            if self.get_max_associations(i) > 0:
+                groups[i] = ZWaveGroup(i, network=self._network, node_id=self.node_id)
+                groups_added += 1
+            i += 1
         return groups
 
     def groups_to_dict(self, extras=['all']):
@@ -642,6 +679,16 @@ class ZWaveNode(ZWaveObject,
         return self._network.manager.isNodeRoutingDevice(self.home_id, self.object_id)
 
     @property
+    def is_zwave_plus(self):
+        """
+        Is this node a zwave plus one.
+
+        :rtype: bool
+
+        """
+        return self._network.manager.isNodeZWavePlus(self.home_id, self.object_id)
+
+    @property
     def is_locked(self):
         """
         Is this node locked.
@@ -718,7 +765,7 @@ class ZWaveNode(ZWaveObject,
 
         """
         if self.is_awake == False:
-            logger.warning('Node state must a minimum set to awake')
+            logger.warning(u'Node state must a minimum set to awake')
             return False
         self._network.manager.healNetworkNode(self.home_id, self.object_id, upNodeRoute)
         return True
@@ -762,7 +809,7 @@ class ZWaveNode(ZWaveObject,
         :rtype: bool
 
         """
-        logger.debug('refresh_info for node [%s]', self.object_id)
+        logger.debug(u'refresh_info for node [%s]', self.object_id)
         return self._network.manager.refreshNodeInfo(self.home_id, self.object_id)
 
     def request_state(self):
@@ -774,7 +821,7 @@ class ZWaveNode(ZWaveObject,
         :rtype: bool
 
         """
-        logger.debug('request_state for node [%s]', self.object_id)
+        logger.debug(u'request_state for node [%s]', self.object_id)
         return self._network.manager.requestNodeState(self.home_id, self.object_id)
 
     def send_information(self):
@@ -788,7 +835,7 @@ class ZWaveNode(ZWaveObject,
         :rtype: bool
 
         '''
-        logger.debug('send_information for node [%s]', self.object_id)
+        logger.debug(u'send_information for node [%s]', self.object_id)
         return self._network.controller.send_node_information(self.object_id)
 
     def network_update(self):
@@ -801,7 +848,7 @@ class ZWaveNode(ZWaveObject,
         :rtype: bool
 
         '''
-        logger.debug('network_update for node [%s]', self.object_id)
+        logger.debug(u'network_update for node [%s]', self.object_id)
         return self._network.controller.request_network_update(self.object_id)
 
     def neighbor_update(self):
@@ -816,7 +863,7 @@ class ZWaveNode(ZWaveObject,
         :rtype: bool
 
         '''
-        logger.debug('neighbor_update for node [%s]', self.object_id)
+        logger.debug(u'neighbor_update for node [%s]', self.object_id)
         return self._network.controller.request_node_neighbor_update(self.object_id)
 
     def create_button(self, buttonid):
@@ -833,7 +880,7 @@ class ZWaveNode(ZWaveObject,
         :rtype: bool
 
         '''
-        logger.debug('create_button for node [%s]', self.object_id)
+        logger.debug(u'create_button for node [%s]', self.object_id)
         return self._network.controller.create_button(self.object_id, buttonid)
 
     def delete_button(self, buttonid):
@@ -850,7 +897,7 @@ class ZWaveNode(ZWaveObject,
         :rtype: bool
 
         '''
-        logger.debug('delete_button for node [%s]', self.object_id)
+        logger.debug(u'delete_button for node [%s]', self.object_id)
         return self._network.controller.delete_button(self.object_id, buttonid)
 
     def request_all_config_params(self):
@@ -858,7 +905,7 @@ class ZWaveNode(ZWaveObject,
         Request the values of all known configurable parameters from a device.
 
         """
-        logger.debug('Requesting config params for node [%s]', self.object_id)
+        logger.debug(u'Requesting config params for node [%s]', self.object_id)
         self._network.manager.requestAllConfigParams(self.home_id, self.object_id)
 
     def request_config_param(self, param):
@@ -879,7 +926,7 @@ class ZWaveNode(ZWaveObject,
         :type param:
 
         """
-        logger.debug('Requesting config param %s for node [%s]', param, self.object_id)
+        logger.debug(u'Requesting config param %s for node [%s]', param, self.object_id)
         self._network.manager.requestConfigParam(self.home_id, self.object_id, param)
 
     def set_config_param(self, param, value, size=2):
@@ -902,7 +949,7 @@ class ZWaveNode(ZWaveObject,
         :rtype: bool
 
         """
-        logger.debug('Set config param %s for node [%s]', param, self.object_id)
+        logger.debug(u'Set config param %s for node [%s]', param, self.object_id)
         return self._network.manager.setConfigParam(self.home_id, self.object_id, param, value, size)
 
 #    def setNodeOn(self, node):

@@ -37,24 +37,25 @@ import libopenzwave
 import re
 import time
 import sys
-if sys.hexversion >= 0x3000000:
+import six
+if six.PY3:
     from pydispatch import dispatcher
 else:
     from louie import dispatcher
-import libopenzwave
 import openzwave
 from openzwave.node import ZWaveNode
+from openzwave.group import ZWaveGroup
 from openzwave.value import ZWaveValue
 from openzwave.scene import ZWaveScene
 from openzwave.controller import ZWaveController
 from openzwave.network import ZWaveNetwork
 from openzwave.option import ZWaveOption
+import libopenzwave
 from tests.common import pyozw_version
 from tests.common import SLEEP
 from tests.api.common import TestApi
 from tests.common import TestPyZWave
-import six
-from six import string_types
+from six import string_types, integer_types
 
 class TestNode(TestApi):
 
@@ -73,7 +74,7 @@ class TestNode(TestApi):
 
     def test_340_node_baud_rate(self):
         node_id = max(self.network.nodes.keys())
-        self.assertTrue(type(self.network.nodes[node_id].max_baud_rate) in [type(long()), type(int())])
+        self.assertTrue(isinstance(self.network.nodes[node_id].max_baud_rate, integer_types))
         self.assertTrue(self.network.nodes[node_id].max_baud_rate > 0)
 
     def test_410_node_product(self):
@@ -88,7 +89,7 @@ class TestNode(TestApi):
         self.assertEqual(self.network.nodes[node_id].name, name)
 
     def test_421_node_name_accent(self):
-        self.wipTest()
+        #~ self.wipTest()
         node_id = max(self.network.nodes.keys())
         name = "noeud éééé"
         self.network.nodes[node_id].name = name
@@ -101,7 +102,7 @@ class TestNode(TestApi):
         self.assertEqual(self.network.nodes[node_id].location, location)
 
     def test_431_node_location_accent(self):
-        self.wipTest()
+        #~ self.wipTest()
         node_id = max(self.network.nodes.keys())
         name = "location éééé"
         self.network.nodes[node_id].location = name
@@ -114,7 +115,7 @@ class TestNode(TestApi):
         self.assertEqual(self.network.nodes[node_id].product_name, name)
 
     def test_441_node_product_name_accent(self):
-        self.wipTest()
+        #~ self.wipTest()
         node_id = max(self.network.nodes.keys())
         name = "product éééé"
         self.network.nodes[node_id].product_name = name
@@ -128,7 +129,7 @@ class TestNode(TestApi):
         self.assertEqual(self.network.nodes[node_id].manufacturer_name, name)
 
     def test_451_node_manufacturer_name_accent(self):
-        self.wipTest()
+        #~ self.wipTest()
         node_id = max(self.network.nodes.keys())
         name = "manufacturer_name éééé"
         self.network.nodes[node_id].manufacturer_name = name
@@ -138,6 +139,29 @@ class TestNode(TestApi):
         node_id = max(self.network.nodes.keys())
         self.assertTrue(self.network.nodes[node_id].num_groups >= 0)
         self.assertEqual(type(self.network.nodes[node_id].groups), type(dict()))
+
+    def test_520_node_group_associations(self):
+        node_id = max(self.network.nodes.keys())
+        self.assertTrue(self.network.nodes[node_id].num_groups >= 0)
+        groups = self.network.nodes[node_id].groups
+        self.assertEqual(type(groups), type(dict()))
+        for grp in groups.keys():
+            associations = groups[grp].associations
+            for ass in associations:
+                self.assertEqual(type(ass), type(0))
+                self.assertTrue(0 <= ass <= 255)
+
+    def test_530_node_group_associations_instances(self):
+        node_id = max(self.network.nodes.keys())
+        self.assertTrue(self.network.nodes[node_id].num_groups >= 0)
+        groups = self.network.nodes[node_id].groups
+        self.assertEqual(type(groups), type(dict()))
+        for grp in groups.keys():
+            associations = groups[grp].associations_instances
+            for ass in associations:
+                self.assertEqual(type(ass), type((0,0)))
+                self.assertTrue(0 <= ass[0] <= 255)
+                self.assertTrue(0 <= ass[1] <= 255)
 
     def test_550_request_all_config_params(self):
         node_id = max(self.network.nodes.keys())
@@ -160,6 +184,10 @@ class TestNode(TestApi):
         node_id = max(self.network.nodes.keys())
         self.assertEqual(type(self.network.nodes[node_id].is_failed), type(True))
 
+    def test_625_node_is_zwave_plus(self):
+        node_id = max(self.network.nodes.keys())
+        self.assertEqual(type(self.network.nodes[node_id].is_zwave_plus), type(True))
+
     def test_630_node_is_info_received(self):
         node_id = max(self.network.nodes.keys())
         self.assertEqual(type(self.network.nodes[node_id].is_info_received), type(True))
@@ -171,6 +199,14 @@ class TestNode(TestApi):
     def test_690_node_type(self):
         node_id = max(self.network.nodes.keys())
         self.assertTrue(isinstance(self.network.nodes[node_id].type, string_types))
+
+    def test_691_node_device_type(self):
+        node_id = max(self.network.nodes.keys())
+        self.assertTrue(isinstance(self.network.nodes[node_id].device_type, string_types))
+
+    def test_692_node_role(self):
+        node_id = max(self.network.nodes.keys())
+        self.assertTrue(isinstance(self.network.nodes[node_id].role, string_types))
 
     def test_710_node_test(self):
         node_id = max(self.network.nodes.keys())
@@ -184,31 +220,37 @@ class TestNode(TestApi):
         node_id = max(self.network.nodes.keys())
         ret=self.network.nodes[node_id].assign_return_route()
         self.assertEqual(ret, True)
+        self.network.controller.kill_command()
 
     def test_740_node_refresh_info(self):
         node_id = max(self.network.nodes.keys())
         ret=self.network.nodes[node_id].refresh_info()
         self.assertEqual(ret, True)
+        self.network.controller.kill_command()
 
     def test_745_node_send_information(self):
         node_id = max(self.network.nodes.keys())
         ret=self.network.nodes[node_id].send_information()
         self.assertEqual(ret, True)
+        self.network.controller.kill_command()
 
     def test_750_node_network_update(self):
         node_id = max(self.network.nodes.keys())
         ret=self.network.nodes[node_id].network_update()
         self.assertEqual(ret, True)
+        self.network.controller.kill_command()
 
     def test_760_node_neighbor_update(self):
         node_id = max(self.network.nodes.keys())
         ret=self.network.nodes[node_id].neighbor_update()
         self.assertEqual(ret, True)
+        self.network.controller.kill_command()
 
     def test_770_node_request_state(self):
         node_id = max(self.network.nodes.keys())
         ret=self.network.nodes[node_id].request_state()
         self.assertEqual(ret, True)
+        self.network.controller.kill_command()
 
     def test_810_node_values(self):
         node_id = max(self.network.nodes.keys())

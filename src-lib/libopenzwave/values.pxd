@@ -19,7 +19,7 @@ along with python-openzwave. If not, see http://www.gnu.org/licenses.
 """
 from libc.stdint cimport uint32_t, uint64_t, int32_t, int16_t, uint8_t, int8_t
 
-cdef extern from "ValueID.h" namespace "OpenZWave":
+cdef extern from "ValueID.h" namespace "OpenZWave::ValueID":
 
     cdef enum ValueGenre:
         ValueGenre_Basic = 0                # The 'level' as controlled by basic commands.  Usually duplicated by another command class.
@@ -41,6 +41,7 @@ cdef extern from "ValueID.h" namespace "OpenZWave":
         ValueType_Raw = 9                   # Used as a list of Bytes
         ValueType_Max = ValueType_Raw       # The highest-number type defined.  Not to be used as a type itself.
 
+cdef extern from "ValueID.h" namespace "OpenZWave":
     cdef cppclass ValueID:
         uint32_t GetHomeId()
         uint8_t GetNodeId()

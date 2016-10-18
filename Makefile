@@ -3,6 +3,7 @@
 
 # You can set these variables from the command line.
 ARCHBASE      = archive
+ARCHIVES      = archives
 BUILDDIR      = build
 DISTDIR       = dists
 NOSE          = $(shell which nosetests)
@@ -57,7 +58,7 @@ help:
 clean: clean-docs clean-archive
 	-rm -rf $(BUILDDIR)
 	-find . -name \*.pyc -delete
-	-cd openzwave && make clean
+	-cd openzwave && $(MAKE) clean
 	${PYTHON_EXEC} setup-lib.py clean --all --build-base $(BUILDDIR)/lib
 	${PYTHON_EXEC} setup-api.py clean --all --build-base $(BUILDDIR)/api
 	${PYTHON_EXEC} setup-manager.py clean --all --build-base $(BUILDDIR)/manager
@@ -120,7 +121,7 @@ repo-deps: common-deps cython-deps tests-deps pip-deps
 	@echo "Dependencies for users installed (python ${python_version_full})"
 
 autobuild-deps: common-deps cython-deps tests-deps pip-deps
-	apt-get install -y git
+	apt-get install --force-yes -y git
 	@echo
 	@echo "Dependencies for autobuilders (docker, travis, ...) installed (python ${python_version_full})"
 
@@ -130,29 +131,29 @@ arch-deps: common-deps pip-deps
 
 python-deps:
 ifeq (${python_version_major},2)
-	apt-get install -y python2.7 python2.7-dev python2.7-minimal
+	apt-get install --force-yes -y python2.7 python2.7-dev python2.7-minimal libyaml-dev python-pip
 endif
 ifeq (${python_version_major},3)
-	-apt-get install -y python3 python3-dev python3-minimal
+	apt-get install --force-yes -y python3 python3-dev python3-minimal libyaml-dev python3-pip
 endif
 
 cython-deps:
 ifeq (${python_version_major},2)
-	apt-get install -y cython
+	apt-get install --force-yes -y cython
 endif
 ifeq (${python_version_major},3)
-	-apt-get install -y cython3
+	 apt-get install --force-yes -y cython3
 endif
 
 common-deps:
 	@echo Installing dependencies for python : ${python_version_full}
 ifeq (${python_version_major},2)
-	apt-get install -y python-pip python-dev python-docutils python-setuptools python-louie
+	apt-get install --force-yes -y python-pip python-dev python-docutils python-setuptools python-louie
 endif
 ifeq (${python_version_major},3)
-	-apt-get install -y python3-pip python3-docutils python3-dev python3-setuptools
+	-apt-get install --force-yes -y python3-pip python3-docutils python3-dev python3-setuptools
 endif
-	apt-get install -y build-essential libudev-dev g++
+	apt-get install --force-yes -y build-essential libudev-dev g++
 
 tests-deps:
 	${PIP_EXEC} install nose-html
@@ -162,7 +163,7 @@ tests-deps:
 	${PIP_EXEC} install pylint
 
 doc-deps:
-	-apt-get install -y python-sphinx
+	-apt-get install --force-yes -y python-sphinx
 	${PIP_EXEC} install sphinxcontrib-blockdiag sphinxcontrib-actdiag sphinxcontrib-nwdiag sphinxcontrib-seqdiag
 
 pip-deps:
@@ -180,7 +181,7 @@ merge-python3:
 	@echo "Commits for branch python3 pushed on github."
 
 clean-docs:
-	cd docs && make clean
+	cd docs && $(MAKE) clean
 	-rm -Rf docs/html
 	-rm -Rf docs/joomla
 	-rm -Rf docs/pdf
@@ -192,13 +193,13 @@ docs: clean-docs
 	-mkdir -p docs/joomla/nosetests
 	-mkdir -p docs/joomla/coverage
 	-mkdir -p docs/joomla/pylint
-	$(NOSE) $(NOSEOPTS) $(NOSECOVER) tests/
+	#$(NOSE) $(NOSEOPTS) $(NOSECOVER) tests/
 	#$(NOSE) $(NOSEOPTS) tests/
 	-cp docs/html/nosetests/* docs/joomla/nosetests
 	-cp docs/html/coverage/* docs/joomla/coverage
-	-$(PYLINT) --output-format=html $(PYLINTOPTS) src-lib/libopenzwave/ src-api/openzwave/ src-manager/pyozwman/ src-web/pyozwweb/>docs/html/pylint/report.html
+	#-$(PYLINT) --output-format=html $(PYLINTOPTS) src-lib/libopenzwave/ src-api/openzwave/ src-manager/pyozwman/ src-web/pyozwweb/>docs/html/pylint/report.html
 	-cp docs/html/pylint/* docs/joomla/pylint/
-	cd docs && make docs
+	cd docs && $(MAKE) docs
 	cp docs/README.rst README.rst
 	cp docs/_build/text/INSTALL_REPO.txt .
 	cp docs/_build/text/INSTALL_ARCH.txt .
@@ -223,13 +224,17 @@ install-api: install-lib
 	@echo
 	@echo "Installation of API finished."
 
-install: install-api
+install-manager: install-api
 	${PYTHON_EXEC} setup-manager.py install
+	@echo
+	@echo "Installation of manager finished."
+
+install: install-manager
 	${PYTHON_EXEC} setup-web.py install
 	@echo
 	@echo "Installation for users finished."
 
-develop: build
+develop:
 	${PYTHON_EXEC} setup-lib.py develop
 	${PYTHON_EXEC} setup-api.py develop
 	${PYTHON_EXEC} setup-manager.py develop
@@ -239,14 +244,14 @@ develop: build
 
 tests:
 	#export NOSESKIP=False && $(NOSE) $(NOSEOPTS) tests/ --with-progressive; unset NOSESKIP
-	export NOSESKIP=False && $(NOSE) $(NOSEOPTS) tests ; unset NOSESKIP
-	@echo
-	@echo "Autobuild-tests for ZWave network finished."
-
-autobuild-tests:
-	$(NOSE) $(NOSEOPTS) tests/lib/autobuild tests/api/autobuild tests/manager/autobuild tests/web/autobuild
+	export NOSESKIP=False && $(NOSE) $(NOSEOPTS) tests/lib tests/api tests/manager ; unset NOSESKIP
 	@echo
 	@echo "Tests for ZWave network finished."
+
+autobuild-tests:
+	$(NOSE) $(NOSEOPTS) tests/lib/autobuild tests/api/autobuild
+	@echo
+	@echo "Autobuild-tests for ZWave network finished."
 
 pylint:
 	$(PYLINT) $(PYLINTOPTS) src-lib/libopenzwave/ src-api/openzwave/ src-manager/pyozwman/ src-web/pyozwweb/
@@ -257,14 +262,15 @@ update: openzwave
 	git pull
 	cd openzwave && git pull
 
-build: openzwave openzwave/.lib/
+build: openzwave/.lib/
+	${PYTHON_EXEC} setup-lib.py build
 
 openzwave:
 	git clone https://github.com/ericyeargan/open-zwave.git openzwave
 
 openzwave/.lib/: openzwave
 	sed -i -e '253s/.*//' openzwave/cpp/src/value_classes/ValueID.h
-	cd openzwave && make
+	cd openzwave && $(MAKE)
 
 clean-archive:
 	-rm -rf $(ARCHBASE)
@@ -292,7 +298,7 @@ $(ARCHDIR):
 	-find $(ARCHDIR) -name zwscene.xml -delete
 	-find $(ARCHDIR) -name zwbutton.xml -delete
 	-find $(ARCHDIR) -name pyozw.db -delete
-	-cd $(ARCHDIR)/openzwave && make clean
+	-cd $(ARCHDIR)/openzwave && $(MAKE) clean
 	-rm -Rf $(ARCHDIR)/openzwave/.git
 	cp -f $(ARCHDIR)/openzwave.vers.cpp $(ARCHDIR)/openzwave/cpp/src/vers.cpp
 
@@ -316,12 +322,15 @@ tgz: clean-archive $(ARCHDIR) docs
 	-mkdir -p $(DISTDIR)
 	tar cvzf $(DISTDIR)/python-openzwave-${python_openzwave_version}.tgz -C $(ARCHBASE) ${ARCHNAME}
 	rm -Rf $(ARCHBASE)
+	mv $(DISTDIR)/python-openzwave-${python_openzwave_version}.tgz $(ARCHIVES)
+	git add $(ARCHIVES)/python-openzwave-${python_openzwave_version}.tgz
+	git commit -m "Add new archive" $(ARCHIVES)/python-openzwave-${python_openzwave_version}.tgz
 	@echo
 	@echo "Archive for version ${python_openzwave_version} created"
 
-push: build develop docs
-	git commit -m "Auto-commit for docs" README.rst INSTALL_REPO.txt INSTALL_MAC.txt INSTALL_WIN.txt INSTALL_ARCH.txt COPYRIGHT.txt DEVEL.txt EXAMPLES.txt CHANGELOG.txt docs/
-	git push
+push: develop
+	-git commit -m "Auto-commit for docs" README.rst INSTALL_REPO.txt INSTALL_MAC.txt INSTALL_WIN.txt INSTALL_ARCH.txt COPYRIGHT.txt DEVEL.txt EXAMPLES.txt CHANGELOG.txt docs/
+	-git push
 	@echo
 	@echo "Commits for branch master pushed on github."
 
@@ -329,18 +338,14 @@ commit: push merge-python3
 	@echo
 	@echo "Commits for branches master/python3 pushed on github."
 
-tag: commit
+tag:
 	git tag v${python_openzwave_version}
 	git push origin v${python_openzwave_version}
 	@echo
 	@echo "Tag pushed on github."
 
-ftp:
-	@./ftp.sh python-openzwave-${python_openzwave_version}.tgz
-	@echo
-	@echo "New version ${python_openzwave_version} published tp ftp"
-
-new-version: tag tgz debch ftp
+new-version: commit tgz tag commit
+	git push
 	@echo
 	@echo "New version ${python_openzwave_version} created and published"
 
